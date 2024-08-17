@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Controlled Q&A - 5 Marks</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(to right, black, rgb(249, 6, 127), rgb(14, 14, 14));
+        }
+        .container {
+            text-align: center;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+        h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: rgb(24, 21, 224);
+        }
+        #question {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        #answer {
+            width: 100%;
+            padding: 10px;
+            font-size: 1em;
+            border-radius: 5px;
+            margin-top: 10px;
+            border: 1px solid #ccc;}
+    </style> 
+</head>
+<body>
+    <div class="container">
+        <h2>QUESTION-1(5 Marks)</h2>
+        <p id="question">Explain Java and OOPs Concept.</p>
+        <h3>Your Answer:</h3>
+        <textarea id="answer" rows="5" readonly></textarea>
+    </div>
+
+    <script>
+        const questionText = document.getElementById('question').innerText;
+        const answerInput = document.getElementById('answer');
+
+        // Function to speak out text
+        function speak(text, callback) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.onend = callback;
+            speechSynthesis.speak(utterance);
+        }
+
+        // Function to start speech recognition
+        function startRecognition(callback) {
+            if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+                speak("Speech Recognition API not supported.");
+                return;
+            }
+
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onresult = function(event) {
+                const userSpeech = event.results[0][0].transcript.trim();
+                if (callback) callback(userSpeech);
+            };
+
+            recognition.onerror = function(event) {
+                speak("Error occurred: " + event.error, () => {
+                    startRecognition(callback); // Restart recognition after error
+                });
+            };
+
+            recognition.start();
+        }
+
+        // Function to ask to read the question
+        function askToReadQuestion() {
+            speak("Press any key to read the question.", () => {
+                window.addEventListener('keydown', readQuestion, { once: true });
+            });
+        }
+
+        // Function to read the question aloud
+        function readQuestion() {
+            speak(`Here is your question: ${questionText}. Press any key to start your answer.`, () => {
+                window.addEventListener('keydown', handleAnyKeyPress, { once: true });
+            });
+        }
+
+        // Function to handle any key press for answering
+        function handleAnyKeyPress(event) {
+            if (event.key === " ") {
+                resetAnswer();
+            } else {
+                promptAnswer();
+            }
+        }
+
+        // Function to prompt the user to answer
+        function promptAnswer() {
+            speak("Please say your answer now.", () => {
+                startRecognition(userSpeech => {
+                    answerInput.value += userSpeech + " ";  // Allow for multiple parts to be added
+                    confirmAnswer(userSpeech);
+                });
+            });
+        }
+
+        // Function to confirm the user's answer
+        function confirmAnswer(userAnswer) {
+            speak(`You said: ${userAnswer}. If you want to add more, press any key. If done, press the Spacebar to submit.`, () => {
+                window.addEventListener('keydown', handleSubmitOrResetPress);
+            });
+        }
+
+        // Function to handle key press for submit or reset
+        function handleSubmitOrResetPress(event) {
+            if (event.key === " ") {
+                submitAnswer(answerInput.value);
+            } else {
+                promptAnswer();  // Continue adding more to the answer
+            }
+            removeSubmitOrResetListener();
+        }
+
+        // Function to remove submit/reset key listener
+        function removeSubmitOrResetListener() {
+            window.removeEventListener('keydown', handleSubmitOrResetPress);
+        }
+
+        // Function to submit the answer
+        function submitAnswer(answer) {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "submit_answer.php", true);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    speak("Answer submitted successfully.");
+                    askToReadQuestion();  // Reset the process for the next question
+                }
+            };
+            window.location.href = `question2.html`; // Update with actual file names
+                currentQuestion++;
+            xhr.send(`question=${encodeURIComponent(questionText)}&answer=${encodeURIComponent(answer)}`);
+        }
+
+        // Function to reset the answer
+        function resetAnswer() {
+            answerInput.value = "";
+            speak("Answer reset. Press any key to answer again.", () => {
+                window.addEventListener('keydown', handleAnyKeyPress, { once: true });
+            });
+        }
+
+        // Start the process when the page loads
+        window.onload = function() {
+            askToReadQuestion();
+        };
+    </script>
+</body>
+</html>

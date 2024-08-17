@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <title>Voice Controlled MCQ Exam</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(to right, black, rgb(249, 6, 127), rgb(14, 14, 14));
+        }
+        .container {
+            text-align: center;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+        h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: rgb(24, 21, 224);
+        }
+        #question {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        #choices {
+            margin-top: 10px;
+        }
+        .choice {
+            margin: 5px 0;
+        }
+        #timer {
+            font-size: 20px;
+            font-weight: bold;
+            color: black;
+        }
+    </style>
+    
+</head>
+<body>
+    <div id="background-wrap">
+       
+    </div>
+    <div class="container">
+        <h2>Question 1</h2>
+        <p id="question">What is OS stands for</p>
+        <div id="choices">
+            <div class="choice">A. Operating System</div>
+            <div class="choice">B. Operating Software</div>
+            <div class="choice">C. System Software</div>
+            <div class="choice">D. None of the above</div>
+        </div>
+        <div>
+            <input type="text" id="answer" readonly placeholder="Your answer will appear here">
+            <div id="timer">Time Remaining: 02:00:00</div> <!-- Timer Display -->
+        </div>
+    </div>
+    
+    <script>
+        const questionElement = document.getElementById('question');
+        const choicesElement = document.getElementById('choices');
+        const answerInput = document.getElementById('answer');
+        let userAnswers = [];
+        let currentQuestion = 3;
+        let totalQuestions = 5; // Adjust as needed
+
+        let timeRemaining = 2 * 60 * 60; // 2 hours in seconds
+        let timerStarted = false; // Flag to check if the timer has started
+
+        // Function to start the timer
+        function startTimer() {
+            const timerElement = document.getElementById('timer');
+            const timerInterval = setInterval(() => {
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    timerElement.innerText = "Time's up!";
+                    submitExam();  // Automatically submit when time is up
+                } else {
+                    timeRemaining--;
+                    const hours = Math.floor(timeRemaining / 3600);
+                    const minutes = Math.floor((timeRemaining % 3600) / 60);
+                    const seconds = timeRemaining % 60;
+                    timerElement.innerText = `Time Remaining: ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+                }
+            }, 1000);
+        }
+
+
+
+          // Function to pad numbers to two digits
+          function pad(number) {
+            return number < 10 ? `0${number}` : number;
+        }
+
+        // Function to read the question aloud and start the timer
+        function readQuestion() {
+            if (!timerStarted) { // Start the timer when the first question is read
+                startTimer();
+                timerStarted = true;
+            }
+            speak(`Here is your question: ${questionText}. Please say your answer.`, () => {
+                promptAnswer();
+            });
+        }
+
+        function speak(text, callback) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.onend = callback;
+            speechSynthesis.speak(utterance);
+        }
+
+        function startRecognition(callback) {
+            if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+                speak("Speech Recognition API not supported.");
+                return;
+            }
+
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onresult = function(event) {
+                const userSpeech = event.results[0][0].transcript.toLowerCase().trim();
+                callback(userSpeech);
+            };
+
+            recognition.onerror = function(event) {
+                speak("Error occurred: " + event.error, () => {
+                    startRecognition(callback);
+                });
+            };
+
+            recognition.start();
+        }
+
+        function askToReadQuestion() {
+            speak("Press any key to read the question.", () => {
+                window.addEventListener('keydown', readQuestionOnce, { once: true });
+            });
+        }
+
+        function readQuestionOnce() {
+            const questionText = questionElement.innerText;
+            const choicesText = Array.from(choicesElement.children)
+                                     .map(choice => choice.innerText)
+                                     .join(', ');
+            speak(`Here is your question: ${questionText}. The choices are: ${choicesText}.`, () => {
+                promptAnswer();
+            });
+        }
+
+        function promptAnswer() {
+            speak("Please say your answer now.", () => {
+                startRecognition(userSpeech => {
+                    answerInput.value = userSpeech;
+                    userAnswers[currentQuestion - 1] = userSpeech;
+                    confirmAnswer(userSpeech);
+                });
+            });
+        }
+
+        function confirmAnswer(userAnswer) {
+            speak(`You said: ${userAnswer}. Press any key to submit or press Spacebar to reset the answer.`, () => {
+                window.addEventListener('keydown', handleSubmitOrResetCommand);
+            });
+        }
+
+        function handleSubmitOrResetCommand(event) {
+            if (event.key === " ") {
+                event.preventDefault(); // Prevent default behavior for space bar
+                resetAnswer();
+            } else if (event.key !== " ") {
+                submitAnswer();
+            }
+            // Remove the event listener after handling the key press
+            window.removeEventListener('keydown', handleSubmitOrResetCommand);
+        }
+
+        function submitAnswer() {
+            if (currentQuestion < totalQuestions) {
+                // Implement navigation to the next question
+                console.log("Answer submitted. Moving to the next question...");
+                // Navigate to the next question page
+                window.location.href = `quiz1.html`; // Update with actual file names
+                currentQuestion++;
+            } else {
+                speak("You have completed all questions. Submitting your answers.", () => {
+                    console.log("Final answers submitted:", userAnswers);
+                    // Implement final submission logic here
+                });
+            }
+        }
+
+        function resetAnswer() {
+            answerInput.value = "";
+            speak("Answer reset. Please say your answer again.", () => {
+                promptAnswer();
+            });
+        }
+
+        window.onload = function() {
+            startTimer();
+            askToReadQuestion();
+        };
+    </script>
+</body>
+</html>

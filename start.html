@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="5;url=ref.html">
+
+    
+    <title>exampage</title>
+    <style>
+    body {
+        font-family: Arial, sans-serif; 
+        
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(to right, black, rgb(249, 6, 127), rgb(14, 14, 14));
+    }
+    
+</style>
+</head>
+<body>
+   
+    <h1 id="message">Let us start exam</h1>
+    
+    <script>
+        
+        function readText() {
+            // Get the text from the element with id "message"
+            const text = document.getElementById('message').innerText;
+            
+            // Create a new instance of SpeechSynthesisUtterance
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // Optionally, you can set properties like pitch, rate, and volume
+            utterance.pitch = 1; // Range: 0 to 2
+            utterance.rate = 1;  // Range: 0.1 to 10
+            utterance.volume = 1; // Range: 0 to 1
+            
+            // Use the SpeechSynthesis API to speak the text
+            window.speechSynthesis.speak(utterance);
+        }
+
+
+        // Call readText when the page is fully loaded
+        document.addEventListener('DOMContentLoaded', readText);
+        window.onload = function() {
+        
+        }
+
+    </script>
+</body>
+</html>
+
